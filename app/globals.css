@@ -581,19 +581,100 @@ input:focus-visible {
   opacity: 0.55;
 }
 
-.mode-select {
+.mode-select-wrap {
+  position: relative;
+  display: inline-flex;
   max-width: 100%;
-  padding-right: 38px;
-  appearance: none;
-  background-image: linear-gradient(45deg, transparent 50%, currentColor 50%), linear-gradient(135deg, currentColor 50%, transparent 50%);
-  background-position: calc(100% - 18px) 50%, calc(100% - 13px) 50%;
-  background-repeat: no-repeat;
-  background-size: 5px 5px, 5px 5px;
 }
 
-.mode-select option {
+.mode-select-wrap::after {
+  position: absolute;
+  top: 17px;
+  right: 18px;
+  width: 9px;
+  height: 9px;
+  transform: rotate(45deg);
+  border-right: 3px solid #fff;
+  border-bottom: 3px solid #fff;
+  content: "";
+  pointer-events: none;
+}
+
+.mode-select {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  max-width: 100%;
+  min-width: 174px;
+  min-height: 46px;
+  padding: 10px 48px 10px 16px;
+  border: 2px solid #fff;
+  border-radius: 999px;
+  color: var(--text);
+  background-color: var(--beach-hi);
+  background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.42), rgba(255, 255, 255, 0.08));
+  box-shadow: inset 0 0 0 1px rgba(31, 49, 56, 0.18), 0 4px 10px rgba(33, 26, 18, 0.08);
+  font: 700 15px "Bricolage Grotesque", Arial, sans-serif;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+  text-align: left;
+}
+
+.mode-select:hover {
+  border-color: #fff;
+  box-shadow: inset 0 0 0 1px rgba(31, 49, 56, 0.18), 0 6px 14px rgba(33, 26, 18, 0.12);
+}
+
+.mode-select:focus-visible,
+.mode-select[aria-expanded="true"] {
+  border-color: #fff;
+  outline: 3px solid #fff;
+  outline-offset: 2px;
+  box-shadow: 0 0 0 6px rgba(255, 255, 255, 0.22);
+}
+
+.mode-options {
+  position: absolute;
+  z-index: 6;
+  bottom: calc(100% + 7px);
+  left: 0;
+  width: max-content;
+  min-width: 100%;
+  max-width: min(260px, calc(100vw - 40px));
+  max-height: 220px;
+  overflow: auto;
+  padding: 5px;
+  border: 1px solid rgba(31, 49, 56, 0.28);
+  border-radius: 12px;
+  background: #f6f1e8;
+  box-shadow: 0 8px 20px rgba(35, 29, 19, 0.24);
+}
+
+.mode-option {
+  display: block;
+  width: 100%;
+  padding: 9px 11px;
+  border: 0;
+  border-radius: 7px;
   color: #1f3138;
-  background: #eef3f0;
+  background: transparent;
+  font: 600 15px "Bricolage Grotesque", Arial, sans-serif;
+  text-align: left;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.mode-option:hover,
+.mode-option:focus-visible {
+  outline: none;
+  color: #fff;
+  background: #2f6d89;
+}
+
+.mode-option[aria-selected="true"] {
+  color: #fff;
+  background: #1f6585;
 }
 
 .online-controls {
