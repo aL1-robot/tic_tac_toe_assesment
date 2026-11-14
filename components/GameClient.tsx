@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { AuthDialog } from "./AuthDialog";
 import { Board } from "./Board";
 import { Dialog } from "./Dialog";
@@ -56,6 +56,9 @@ export function GameClient() {
   const [nextStart, setNextStart] = useState<Mark>("X");
   const [scores, setScores] = useState({ X: 0, O: 0 });
   const [localResult, setLocalResult] = useState<LocalResult | null>(null);
+  // Holds the result until the stick finishes carving, then shown after 450ms delay
+  const pendingResult = useRef<LocalResult | null>(null);
+  const resultTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [tideWave, setTideWave] = useState(0);
   const [authOpen, setAuthOpen] = useState(false);
   const [authForOnline, setAuthForOnline] = useState(false);
@@ -81,17 +84,20 @@ export function GameClient() {
   const finishLocalRound = useCallback((nextBoard: BoardState) => {
     const outcome = gameResult(nextBoard);
     if (outcome === null) return;
+
+    // Store into ref; popup is deferred until the stick finishes carving.
+    // Mirrors HTML: whenIdle(() => setTimeout(showModal, 450))
     if (outcome === "draw") {
-      setLocalResult({
-        title: "It’s a draw",
+      pendingResult.current = {
+        title: "It's a draw",
         message: "Every line was blocked. Go again?",
         winner: "draw",
-      });
+      };
       return;
     }
 
     setScores((current) => ({ ...current, [outcome]: current[outcome] + 1 }));
-    setLocalResult({
+    pendingResult.current = {
       title:
         mode === "two"
           ? `${outcome} wins!`
@@ -102,11 +108,34 @@ export function GameClient() {
         scores.O + (outcome === "O" ? 1 : 0)
       }`,
       winner: outcome,
-    });
+    };
+    // Win case: popup fires via onCarveIdle → handleCarveIdle (see below).
   }, [mode, scores]);
 
+
+  // Called by Marks when the stick finishes carving — mirrors HTML's whenIdle callback
+  const handleCarveIdle = useCallback(() => {
+    if (!pendingResult.current) return;
+    const result = pendingResult.current;
+    pendingResult.current = null;
+    resultTimer.current = setTimeout(() => {
+      resultTimer.current = null;
+      setLocalResult(result);
+    }, 450);
+  }, []);
+
+  const clearPendingLocalResult = useCallback(() => {
+    pendingResult.current = null;
+    if (resultTimer.current !== null) {
+      clearTimeout(resultTimer.current);
+      resultTimer.current = null;
+    }
+  }, []);
+
+  useEffect(() => clearPendingLocalResult, [clearPendingLocalResult]);
+
   const playLocalMove = useCallback((cell: number, mark: Mark) => {
-    if (board[cell] !== null || localResult) return;
+    if (board[cell] !== null || localResult || pendingResult.current) return;
     const nextBoard = [...board];
     nextBoard[cell] = mark;
     setBoard(nextBoard);
@@ -116,7 +145,7 @@ export function GameClient() {
 
   useEffect(() => {
     if (mode !== "easy" && mode !== "hard") return;
-    if (turn !== "O" || localResult) return;
+    if (turn !== "O" || localResult || pendingResult.current) return;
 
     const timer = window.setTimeout(() => {
       const move = mode === "hard" ? getHardMove(board) : getEasyMove(board);
@@ -137,6 +166,7 @@ export function GameClient() {
   }
 
   function startLocalRound(start: Mark) {
+    clearPendingLocalResult();
     if (board.some((cell) => cell !== null) || localResult) setTideWave((value) => value + 1);
     setBoard(EMPTY_BOARD());
     setTurn(start);
@@ -150,6 +180,7 @@ export function GameClient() {
       setAuthOpen(true);
       return;
     }
+    clearPendingLocalResult();
     setMode(nextMode);
     setLocalResult(null);
     setScores({ X: 0, O: 0 });
@@ -160,11 +191,12 @@ export function GameClient() {
   const authSucceeded = useCallback(() => {
     setAuthOpen(false);
     if (authForOnline) {
+      clearPendingLocalResult();
       setMode("online");
       setLocalResult(null);
     }
     setAuthForOnline(false);
-  }, [authForOnline, setMode]);
+  }, [authForOnline, clearPendingLocalResult, setMode]);
 
   async function handleSignOut() {
     setSignOutError("");
@@ -207,6 +239,7 @@ export function GameClient() {
   const localCanPlay =
     mode !== "online" &&
     localResult === null &&
+    pendingResult.current === null &&
     (mode === "two" || turn === "X");
   const onlineCanPlay =
     mode === "online" &&
@@ -285,6 +318,7 @@ export function GameClient() {
             winningLine={mode === "online" ? onlineWinningLine : getWinner(board)}
             canPlay={mode === "online" ? onlineCanPlay : localCanPlay}
             onCellClick={handleCellClick}
+            onCarveIdle={mode !== "online" ? handleCarveIdle : undefined}
             tideKey={mode === "online" ? online.game?.id ?? "idle" : tideWave === 0 ? "idle" : tideWave}
           />
 

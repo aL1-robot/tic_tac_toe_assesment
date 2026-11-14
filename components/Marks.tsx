@@ -89,9 +89,8 @@ export function Marks({ board, winningLine, onCarveIdle }: MarksProps) {
       markEls.current[index] = g;
 
       carver.carve(pathEls, 230);
-      if (onCarveIdle) carver.whenIdle(onCarveIdle);
     },
-    [onCarveIdle]
+    []
   );
 
   // ── draw the win line ──────────────────────────────────────────────────────
@@ -135,6 +134,7 @@ export function Marks({ board, winningLine, onCarveIdle }: MarksProps) {
     }
 
     // find newly placed cells
+    const hasNewMark = board.some((cell, i) => cell !== null && prev[i] === null);
     board.forEach((cell, i) => {
       if (cell !== null && prev[i] === null) {
         drawMark(i, cell, marksGroup);
@@ -144,6 +144,14 @@ export function Marks({ board, winningLine, onCarveIdle }: MarksProps) {
     // winning line
     if (winningLine && !winLineRef.current) {
       drawWinLine(winningLine, hitsGroup);
+    }
+
+    if (
+      hasNewMark &&
+      onCarveIdle &&
+      (winningLine !== null || board.every((cell) => cell !== null))
+    ) {
+      carverRef.current?.whenIdle(onCarveIdle);
     }
 
     prevBoardRef.current = [...board];

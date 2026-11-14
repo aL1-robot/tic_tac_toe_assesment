@@ -8,14 +8,15 @@ type BoardProps = {
   winningLine: WinningLine | null;
   canPlay: boolean;
   onCellClick: (cell: number) => void;
+  onCarveIdle?: () => void;
   tideKey: string | number;
 };
 
-export function Board({ board, winningLine, canPlay, onCellClick, tideKey }: BoardProps) {
+export function Board({ board, winningLine, canPlay, onCellClick, onCarveIdle, tideKey }: BoardProps) {
   return (
     <div className="tablet">
       <div className="sandbed" aria-hidden="true" />
-      <Marks board={board} winningLine={winningLine} />
+      <Marks board={board} winningLine={winningLine} onCarveIdle={onCarveIdle} />
       <div className="cell-grid" role="group" aria-label="Game board">
         {board.map((mark, index) => (
           <button
