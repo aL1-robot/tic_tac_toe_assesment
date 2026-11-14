@@ -146,11 +146,8 @@ export function Marks({ board, winningLine, onCarveIdle }: MarksProps) {
       drawWinLine(winningLine, hitsGroup);
     }
 
-    if (
-      hasNewMark &&
-      onCarveIdle &&
-      (winningLine !== null || board.every((cell) => cell !== null))
-    ) {
+    const isGameOver = winningLine !== null || board.every((cell) => cell !== null);
+    if (isGameOver && onCarveIdle) {
       carverRef.current?.whenIdle(onCarveIdle);
     }
 

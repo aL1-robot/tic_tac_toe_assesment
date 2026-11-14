@@ -824,6 +824,7 @@ input:focus-visible {
   background: rgba(15, 25, 28, 0.32);
   -webkit-backdrop-filter: blur(4px);
   backdrop-filter: blur(4px);
+  animation: fadein 0.25s ease-out;
 }
 
 .card {
@@ -838,6 +839,7 @@ input:focus-visible {
     linear-gradient(rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.08)),
     var(--sand-texture);
   box-shadow: 0 16px 42px rgba(24, 21, 14, 0.3);
+  animation: pop 0.45s cubic-bezier(0.2, 1.4, 0.4, 1);
 }
 
 .card > p,
@@ -935,6 +937,19 @@ input:focus-visible {
   to { transform: translateY(480px) rotate(680deg); }
 }
 
+@keyframes fadein {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes pop {
+  from {
+    opacity: 0;
+    transform: scale(0.8) translateY(14px);
+  }
+}
+
 @media (min-width: 900px) {
   .side {
     display: flex;
@@ -1019,5 +1034,10 @@ input:focus-visible {
     animation-iteration-count: 1 !important;
     scroll-behavior: auto !important;
     transition-duration: 0.01ms !important;
+  }
+
+  .card,
+  .modal {
+    animation: none !important;
   }
 }

@@ -56,7 +56,9 @@ export function GameClient() {
   const [nextStart, setNextStart] = useState<Mark>("X");
   const [scores, setScores] = useState({ X: 0, O: 0 });
   const [localResult, setLocalResult] = useState<LocalResult | null>(null);
-  // Holds the result until the stick finishes carving, then shown after 450ms delay
+  const [onlineResult, setOnlineResult] = useState<LocalResult | null>(null);
+  const [roundEnding, setRoundEnding] = useState(false);
+  // Holds the result until the stick finishes carving, then shown after delay
   const pendingResult = useRef<LocalResult | null>(null);
   const resultTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [tideWave, setTideWave] = useState(0);
@@ -85,6 +87,8 @@ export function GameClient() {
     const outcome = gameResult(nextBoard);
     if (outcome === null) return;
 
+    setRoundEnding(true);
+
     // Store into ref; popup is deferred until the stick finishes carving.
     // Mirrors HTML: whenIdle(() => setTimeout(showModal, 450))
     if (outcome === "draw") {
@@ -112,7 +116,6 @@ export function GameClient() {
     // Win case: popup fires via onCarveIdle → handleCarveIdle (see below).
   }, [mode, scores]);
 
-
   // Called by Marks when the stick finishes carving — mirrors HTML's whenIdle callback
   const handleCarveIdle = useCallback(() => {
     if (!pendingResult.current) return;
@@ -120,39 +123,45 @@ export function GameClient() {
     pendingResult.current = null;
     resultTimer.current = setTimeout(() => {
       resultTimer.current = null;
-      setLocalResult(result);
-    }, 450);
-  }, []);
+      setRoundEnding(false);
+      if (mode === "online") {
+        setOnlineResult(result);
+      } else {
+        setLocalResult(result);
+      }
+    }, 600);
+  }, [mode]);
 
-  const clearPendingLocalResult = useCallback(() => {
+  const clearPendingResults = useCallback(() => {
     pendingResult.current = null;
+    setRoundEnding(false);
     if (resultTimer.current !== null) {
       clearTimeout(resultTimer.current);
       resultTimer.current = null;
     }
   }, []);
 
-  useEffect(() => clearPendingLocalResult, [clearPendingLocalResult]);
+  useEffect(() => clearPendingResults, [clearPendingResults]);
 
   const playLocalMove = useCallback((cell: number, mark: Mark) => {
-    if (board[cell] !== null || localResult || pendingResult.current) return;
+    if (board[cell] !== null || localResult || roundEnding) return;
     const nextBoard = [...board];
     nextBoard[cell] = mark;
     setBoard(nextBoard);
     finishLocalRound(nextBoard);
     if (gameResult(nextBoard) === null) setTurn(other(mark));
-  }, [board, finishLocalRound, localResult]);
+  }, [board, finishLocalRound, localResult, roundEnding]);
 
   useEffect(() => {
     if (mode !== "easy" && mode !== "hard") return;
-    if (turn !== "O" || localResult || pendingResult.current) return;
+    if (turn !== "O" || localResult || roundEnding) return;
 
     const timer = window.setTimeout(() => {
       const move = mode === "hard" ? getHardMove(board) : getEasyMove(board);
       if (move !== null) playLocalMove(move, "O");
     }, 650);
     return () => window.clearTimeout(timer);
-  }, [board, localResult, mode, playLocalMove, turn]);
+  }, [board, localResult, mode, playLocalMove, roundEnding, turn]);
 
   function handleCellClick(cell: number) {
     if (mode === "online") {
@@ -166,7 +175,7 @@ export function GameClient() {
   }
 
   function startLocalRound(start: Mark) {
-    clearPendingLocalResult();
+    clearPendingResults();
     if (board.some((cell) => cell !== null) || localResult) setTideWave((value) => value + 1);
     setBoard(EMPTY_BOARD());
     setTurn(start);
@@ -180,9 +189,10 @@ export function GameClient() {
       setAuthOpen(true);
       return;
     }
-    clearPendingLocalResult();
+    clearPendingResults();
     setMode(nextMode);
     setLocalResult(null);
+    setOnlineResult(null);
     setScores({ X: 0, O: 0 });
     if (nextMode !== "online") startLocalRound("X");
   }
@@ -191,12 +201,13 @@ export function GameClient() {
   const authSucceeded = useCallback(() => {
     setAuthOpen(false);
     if (authForOnline) {
-      clearPendingLocalResult();
+      clearPendingResults();
       setMode("online");
       setLocalResult(null);
+      setOnlineResult(null);
     }
     setAuthForOnline(false);
-  }, [authForOnline, clearPendingLocalResult, setMode]);
+  }, [authForOnline, clearPendingResults, setMode]);
 
   async function handleSignOut() {
     setSignOutError("");
@@ -239,16 +250,26 @@ export function GameClient() {
   const localCanPlay =
     mode !== "online" &&
     localResult === null &&
-    pendingResult.current === null &&
+    !roundEnding &&
     (mode === "two" || turn === "X");
   const onlineCanPlay =
     mode === "online" &&
     activeOnlineGame?.status === "active" &&
     onlineMark !== null &&
+    !roundEnding &&
     activeOnlineGame.turn === onlineMark;
 
-  let onlineResult: LocalResult | null = null;
-  if (activeOnlineGame?.status === "finished" && activeOnlineGame.id !== dismissedGameId) {
+  useEffect(() => {
+    if (mode !== "online" || !activeOnlineGame || activeOnlineGame.status !== "finished") {
+      return;
+    }
+    if (activeOnlineGame.id === dismissedGameId) {
+      return;
+    }
+    if (onlineResult !== null || pendingResult.current !== null) {
+      return;
+    }
+
     const won = activeOnlineGame.winner === onlineMark;
     const reason =
       activeOnlineGame.end_reason === "resign"
@@ -262,7 +283,7 @@ export function GameClient() {
           : activeOnlineGame.winner === "draw"
             ? "Every line was blocked. Go again?"
             : "Three in a row takes the beach.";
-    onlineResult = {
+    const result: LocalResult = {
       title:
         activeOnlineGame.winner === "draw"
           ? "It’s a draw"
@@ -272,7 +293,26 @@ export function GameClient() {
       message: reason,
       winner: activeOnlineGame.winner === "draw" ? "draw" : won ? onlineMark ?? undefined : undefined,
     };
-  }
+
+    setRoundEnding(true);
+
+    if (activeOnlineGame.end_reason === "resign" || activeOnlineGame.end_reason === "timeout") {
+      resultTimer.current = setTimeout(() => {
+        resultTimer.current = null;
+        setRoundEnding(false);
+        setOnlineResult(result);
+      }, 600);
+    } else {
+      pendingResult.current = result;
+    }
+  }, [activeOnlineGame, dismissedGameId, mode, online.opponentName, onlineMark, onlineResult]);
+
+  const handleOnlineNewGame = useCallback(() => {
+    setOnlineResult(null);
+    clearPendingResults();
+    if (activeOnlineGame) setDismissedGameId(activeOnlineGame.id);
+    void online.findGame();
+  }, [activeOnlineGame, clearPendingResults, online]);
 
   return (
     <>
@@ -318,7 +358,7 @@ export function GameClient() {
             winningLine={mode === "online" ? onlineWinningLine : getWinner(board)}
             canPlay={mode === "online" ? onlineCanPlay : localCanPlay}
             onCellClick={handleCellClick}
-            onCarveIdle={mode !== "online" ? handleCarveIdle : undefined}
+            onCarveIdle={handleCarveIdle}
             tideKey={mode === "online" ? online.game?.id ?? "idle" : tideWave === 0 ? "idle" : tideWave}
           />
 
@@ -360,7 +400,7 @@ export function GameClient() {
                 </button>
               )}
               {!online.game && !online.loading && (
-                <button className="b" type="button" onClick={() => void online.findGame()}>
+                <button className="b" type="button" onClick={handleOnlineNewGame}>
                   Search again
                 </button>
               )}
@@ -382,7 +422,7 @@ export function GameClient() {
                 </>
               )}
               {online.game?.status === "finished" && (
-                <button type="button" className="b" onClick={() => void online.findGame()}>
+                <button type="button" className="b" onClick={handleOnlineNewGame}>
                   New game
                 </button>
               )}
@@ -442,12 +482,16 @@ export function GameClient() {
                 : localResult?.winner === "X")}
           onClose={() => {
             setLocalResult(null);
+            setOnlineResult(null);
+            clearPendingResults();
             if (activeOnlineGame) setDismissedGameId(activeOnlineGame.id);
           }}
           onNewGame={() => {
+            setLocalResult(null);
+            setOnlineResult(null);
+            clearPendingResults();
             if (mode === "online") {
-              if (activeOnlineGame) setDismissedGameId(activeOnlineGame.id);
-              void online.findGame();
+              handleOnlineNewGame();
             } else {
               startLocalRound(nextStart);
             }
