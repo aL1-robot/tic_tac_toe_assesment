@@ -101,6 +101,7 @@ export function Marks({ board, winningLine, onCarveIdle }: MarksProps) {
       if (!carver) return;
       const p = document.createElementNS(NS, "path");
       p.setAttribute("class", "win-line");
+      p.setAttribute("filter", "url(#rough)");
       p.setAttribute("d", winLineD(wl));
       hitsGroup.appendChild(p);
       winLineRef.current = p;

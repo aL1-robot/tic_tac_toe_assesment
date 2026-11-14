@@ -260,9 +260,10 @@ input:focus-visible {
   position: absolute;
   z-index: -1;
   inset: 0;
-  overflow: hidden;
   border-radius: inherit;
+  filter: url(#edge);
   background:
+    var(--speck),
     repeating-linear-gradient(100deg, rgba(120, 92, 44, 0.07) 0 2px, transparent 2px 13px),
     radial-gradient(70% 38% at 28% 92%, rgba(120, 92, 44, 0.16), transparent),
     radial-gradient(60% 30% at 80% 10%, rgba(120, 92, 44, 0.1), transparent),
@@ -292,6 +293,8 @@ input:focus-visible {
   border-radius: inherit;
   background: linear-gradient(105deg, transparent 38%, rgba(255, 255, 255, 0.16) 50%, transparent 62%);
   background-size: 300% 100%;
+  -webkit-mask-image: linear-gradient(90deg, #000, transparent 60%);
+  mask-image: linear-gradient(90deg, #000, transparent 60%);
   animation: shimmer 8s ease-in-out infinite;
   content: "";
   pointer-events: none;
@@ -821,9 +824,8 @@ input:focus-visible {
   display: grid;
   place-items: center;
   padding: 16px;
-  background: rgba(15, 25, 28, 0.32);
-  -webkit-backdrop-filter: blur(4px);
-  backdrop-filter: blur(4px);
+  background: rgba(12, 28, 33, 0.58);
+  overflow: hidden;
   animation: fadein 0.25s ease-out;
 }
 
@@ -833,12 +835,14 @@ input:focus-visible {
   overflow: hidden;
   padding: 28px;
   border: 1px solid rgba(89, 73, 43, 0.18);
-  border-radius: 24px;
+  border-radius: 26px 30px 24px 32px / 30px 24px 32px 26px;
   color: #2a2018;
   background:
     linear-gradient(rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.08)),
     var(--sand-texture);
-  box-shadow: 0 16px 42px rgba(24, 21, 14, 0.3);
+  box-shadow:
+    0 0 0 4px var(--sand-edge),
+    0 26px 50px rgba(0, 0, 0, 0.45);
   animation: pop 0.45s cubic-bezier(0.2, 1.4, 0.4, 1);
 }
 
