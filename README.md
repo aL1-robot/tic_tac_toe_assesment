@@ -1,36 +1,66 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Tic Tide Tac Toe
 
-## Getting Started
+Classic tic-tac-toe with a beach-and-tide look. X always starts, three in a row wins, and a full board with no line is a draw. Choose same-screen two-player, an easy bot, a perfect-play hard bot, or online matchmaking.
 
-First, run the development server:
+## Local setup
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+Requirements: Node.js 20.9+ and Docker (for the local Supabase stack).
+
+```sh
+npm install
+cp .env.example .env.local
+supabase start
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Copy the local API URL and anon key printed by `supabase status` into `.env.local` as `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY`. Set `NEXT_PUBLIC_ACCOUNT_EMAIL_DOMAIN` to a domain you control (for example, `accounts.example.com`); it is used only to create synthetic sign-in addresses, and no mail is sent.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Apply the migrations and run the app:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```sh
+supabase db reset
+npm run dev
+```
 
-## Learn More
+Open [http://localhost:3000](http://localhost:3000). The app uses the local database migrations in `supabase/migrations/`; reset recreates the local database and applies them in order.
 
-To learn more about Next.js, take a look at the following resources:
+## Supabase Auth settings
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+In the Supabase project’s **Authentication** settings:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- Email confirmations: **off**
+- Allow new users to sign up: **on**
+- Minimum password length: **6**
 
-## Deploy on Vercel
+Accounts are presented as username and password. Internally, the app lowercases the username and forms `<username>@<NEXT_PUBLIC_ACCOUNT_EMAIL_DOMAIN>`. The domain must be controlled by the project owner. The browser only uses the public anon key; never put a service-role key in client code or `NEXT_PUBLIC_*` variables.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Deploy
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Create a hosted Supabase project and a Vercel project for this repository. Set the three environment variables in Vercel to the hosted Supabase URL, anon key, and owner-controlled synthetic-email domain. Configure the Auth settings above, then apply the schema to the hosted project:
+
+```sh
+supabase link --project-ref <project-ref>
+supabase db push
+```
+
+Deploy the Next.js app from Vercel. For a hosted database, generate updated TypeScript definitions after schema changes with:
+
+```sh
+supabase gen types typescript --linked > lib/supabase/database.types.ts
+```
+
+The checked-in definitions cover the four migrations in this repository.
+
+## Architecture
+
+The App Router page is a thin server component. Its client game UI owns local rounds, bot turns, dialogs, and the shared beach-themed board. Pure rules and both bot strategies are in `lib/game/`, independent of React and Supabase. Local and bot rounds never call game RPCs or write online statistics.
+
+Supabase Auth uses `@supabase/ssr` cookie sessions, refreshed in the Next.js 16 `proxy.ts`. The database creates profiles on signup. Online matchmaking, moves, resignation, timeout claims, and cancellations go through the security-definer RPCs; the client subscribes to the matched game row for updates. The public lobby uses Supabase Realtime Presence (no player-count table). The leaderboard reads the database view and refreshes on `player_stats` changes.
+
+The selected mode is retained per browser tab so an online match can resume after a reload; accounts and scores are never stored in browser storage.
+
+Run the project checks with `npm run lint`, `npm run typecheck`, and `npm test`. To regenerate the schema definitions for the local stack, run `supabase gen types typescript --local > lib/supabase/database.types.ts`.
+
+## Known limits
+
+- Two accounts controlled by the same person can farm points; there is no anti-collusion yet.
+- Abandoned active games stay open until a player resigns or claims a timeout.
