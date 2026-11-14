@@ -698,6 +698,7 @@ input:focus-visible {
   display: none;
   width: 300px;
   flex: none;
+  flex-direction: column;
 }
 
 .lbpanel {
@@ -709,6 +710,7 @@ input:focus-visible {
   padding: 24px 24px 20px;
   border-radius: 26px 30px 24px 32px / 30px 24px 32px 26px;
   color: #2a2018;
+  box-sizing: border-box;
 }
 
 .lbpanel::before {
@@ -741,8 +743,30 @@ input:focus-visible {
 
 .rows {
   margin: 8px 0 0;
-  padding: 0;
+  padding: 0 6px 0 0;
   list-style: none;
+  max-height: min(calc(100dvh - 220px), 440px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--sand-edge) transparent;
+}
+
+.rows::-webkit-scrollbar {
+  width: 6px;
+}
+
+.rows::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.rows::-webkit-scrollbar-thumb {
+  background: var(--sand-edge);
+  border-radius: 9999px;
+}
+
+.rows::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, var(--sand-edge) 75%, #000);
 }
 
 .rows li {
@@ -914,6 +938,7 @@ input:focus-visible {
 @media (min-width: 900px) {
   .side {
     display: flex;
+    align-self: flex-start;
   }
 }
 
