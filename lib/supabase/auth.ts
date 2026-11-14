@@ -1,11 +1,10 @@
 import { createClient } from "./client";
 
 export const USERNAME_PATTERN = /^[a-z0-9_-]{3,16}$/;
+const ACCOUNT_EMAIL_DOMAIN = "tictac.tide.dev";
 
 export function syntheticEmail(username: string): string {
-  const domain = process.env.NEXT_PUBLIC_ACCOUNT_EMAIL_DOMAIN?.trim().replace(/^@/, "").toLowerCase();
-  if (!domain) throw new Error("Set NEXT_PUBLIC_ACCOUNT_EMAIL_DOMAIN to use accounts.");
-  return `${username.toLowerCase()}@${domain}`;
+  return `${username.toLowerCase()}@${ACCOUNT_EMAIL_DOMAIN}`;
 }
 
 export async function usernameAvailable(username: string): Promise<boolean> {

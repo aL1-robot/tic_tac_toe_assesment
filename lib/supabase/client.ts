@@ -7,18 +7,22 @@ import type { Database } from "./database.types";
 let browserClient: SupabaseClient<Database> | undefined;
 
 export function hasSupabaseConfig(): boolean {
-  return Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
+  return Boolean(
+    process.env.NEXT_PUBLIC_SUPABASE_URL &&
+      (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY),
+  );
 }
 
 export function createClient(): SupabaseClient<Database> {
+  const key =
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
   if (!hasSupabaseConfig()) {
-    throw new Error("Add the Supabase URL and anon key to your environment to use online features.");
+    throw new Error("Add the Supabase URL and public anon or publishable key to use online features.");
   }
 
   browserClient ??= createBrowserClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    key!,
   );
   return browserClient;
 }
-

@@ -12,7 +12,7 @@ cp .env.example .env.local
 supabase start
 ```
 
-Copy the local API URL and anon key printed by `supabase status` into `.env.local` as `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY`. Set `NEXT_PUBLIC_ACCOUNT_EMAIL_DOMAIN` to a domain you control (for example, `accounts.example.com`); it is used only to create synthetic sign-in addresses, and no mail is sent.
+Copy the local API URL and anon (or publishable) key printed by `supabase status` into `.env.local` as `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` (or `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`). No email domain or mail setup is needed.
 
 Apply the migrations and run the app:
 
@@ -31,11 +31,11 @@ In the Supabase project’s **Authentication** settings:
 - Allow new users to sign up: **on**
 - Minimum password length: **6**
 
-Accounts are presented as username and password. Internally, the app lowercases the username and forms `<username>@<NEXT_PUBLIC_ACCOUNT_EMAIL_DOMAIN>`. The domain must be controlled by the project owner. The browser only uses the public anon key; never put a service-role key in client code or `NEXT_PUBLIC_*` variables.
+Accounts are presented as username and password. Internally, the app maps each username to a fixed, non-deliverable address for Supabase Auth; email confirmations must be off because these addresses cannot receive mail. The browser only uses a public anon or publishable key; never put a service-role key in client code or `NEXT_PUBLIC_*` variables.
 
 ## Deploy
 
-Create a hosted Supabase project and a Vercel project for this repository. Set the three environment variables in Vercel to the hosted Supabase URL, anon key, and owner-controlled synthetic-email domain. Configure the Auth settings above, then apply the schema to the hosted project:
+Create a hosted Supabase project and a Vercel project for this repository. Set the Supabase URL and public anon or publishable key in Vercel. Configure the Auth settings above, then apply the schema to the hosted project:
 
 ```sh
 supabase link --project-ref <project-ref>
